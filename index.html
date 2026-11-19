@@ -213,27 +213,38 @@
       video.addEventListener('dragstart', e => e.preventDefault());
 
       let playAttempted = false;
-      const attemptPlay = () => {
+
+      function attemptPlay() {
         if (playAttempted) return;
         playAttempted = true;
         video.play().catch(() => {
-          // If autoplay with sound is blocked, play on any user tap/click
-          const playOnInteraction = () => {
+          // Autoplay with sound blocked → play with sound on any tap/click anywhere
+          const startWithSound = () => {
             video.muted = false;
             video.volume = 1;
             video.play();
-            document.removeEventListener('click', playOnInteraction);
-            document.removeEventListener('touchstart', playOnInteraction);
-            document.removeEventListener('pointerdown', playOnInteraction);
+            document.removeEventListener('click', startWithSound);
+            document.removeEventListener('touchstart', startWithSound);
+            document.removeEventListener('pointerdown', startWithSound);
           };
-          document.addEventListener('click', playOnInteraction, { once: true });
-          document.addEventListener('touchstart', playOnInteraction, { once: true });
-          document.addEventListener('pointerdown', playOnInteraction, { once: true });
+          document.addEventListener('click', startWithSound, { once: true });
+          document.addEventListener('touchstart', startWithSound, { once: true });
+          document.addEventListener('pointerdown', startWithSound, { once: true });
         });
-      };
+      }
 
       if (video.readyState >= 3) attemptPlay();
       else video.addEventListener('canplay', attemptPlay, { once: true });
+
+      // Extra safety: any first interaction starts video with sound
+      document.addEventListener('click', function firstTap() {
+        if (video.paused) {
+          video.muted = false;
+          video.volume = 1;
+          video.play();
+        }
+        document.removeEventListener('click', firstTap);
+      }, { once: true });
     }
     const viewerEl = document.getElementById('viewerCount');
     let viewers = 1284;
