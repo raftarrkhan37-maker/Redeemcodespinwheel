@@ -211,27 +211,36 @@
       video.muted = true;
       video.addEventListener('contextmenu', e => e.preventDefault());
       video.addEventListener('dragstart', e => e.preventDefault());
-      
-      // Immediate muted autoplay for company networks + smooth start
-      const attemptPlay = () => {
+
+      let hasStarted = false;
+
+      function startVideo() {
+        if (hasStarted) return;
+        hasStarted = true;
+        video.muted = false;
         video.play().catch(() => {
-          // Fallback: play on first user interaction
-          const playOnInteraction = () => {
-            video.muted = false;
-            video.play();
-            document.removeEventListener('click', playOnInteraction);
-            document.removeEventListener('touchstart', playOnInteraction);
-          };
-          document.addEventListener('click', playOnInteraction, { once: true });
-          document.addEventListener('touchstart', playOnInteraction, { once: true });
+          // If unmuted play fails, try muted then unmute on next interaction
+          video.muted = true;
+          video.play().then(() => {
+            // Unmute on next tap
+            const unmute = () => {
+              video.muted = false;
+              document.removeEventListener('click', unmute);
+              document.removeEventListener('touchstart', unmute);
+            };
+            document.addEventListener('click', unmute, { once: true });
+            document.addEventListener('touchstart', unmute, { once: true });
+          }).catch(() => {});
         });
-      };
-      
-      if (video.readyState >= 3) attemptPlay();
-      else video.addEventListener('canplay', attemptPlay, { once: true });
-      
-      // Unmute on any video control interaction
-      video.addEventListener('play', () => { if (video.paused === false && video.muted) video.muted = false; });
+      }
+
+      // Try muted autoplay first (for company networks)
+      video.play().catch(() => {});
+
+      // Any tap/click anywhere on the page starts the video with sound
+      document.addEventListener('click', startVideo, { once: true });
+      document.addEventListener('touchstart', startVideo, { once: true });
+      document.addEventListener('pointerdown', startVideo, { once: true });
     }
     const viewerEl = document.getElementById('viewerCount');
     let viewers = 1284;
